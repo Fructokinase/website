@@ -36,12 +36,12 @@ bp = Blueprint('api.protein', __name__, url_prefix='/api/protein')
 @bp.route('/<path:dcid>')
 def get_node(dcid):
     """Returns data given a protein node."""
-    response = dc.fetch_data('/internal/bio', {
+    response = dc.send_request('bio', {
         'dcid': dcid,
     },
-                             compress=False,
-                             post=False,
-                             has_payload=False)
+                               compress=False,
+                               post=False,
+                               has_payload=False)
     return response
 
 
@@ -296,8 +296,8 @@ def protein_protein_interaction():
 
         if not isinstance(center_protein_dcid, str):
             raise TypeError("proteinDcid must be a string")
-        if not (isinstance(score_threshold, int) or
-                isinstance(score_threshold, float)):
+        if not (isinstance(score_threshold, int)
+                or isinstance(score_threshold, float)):
             raise TypeError('scoreThreshold must be a number')
         if not isinstance(max_interactors, int):
             raise TypeError("maxInteractors must be an integer")

@@ -25,10 +25,10 @@ bp = flask.Blueprint('api.disease', __name__, url_prefix='/api/disease')
 @bp.route('/<path:dcid>')
 def get_node(dcid):
     """Returns data given a disease node."""
-    response = dc_service.fetch_data('/internal/bio', {
+    response = dc_service.send_request('bio', {
         'dcid': dcid,
     },
-                                     compress=False,
-                                     post=False,
-                                     has_payload=False)
+                                       compress=False,
+                                       post=False,
+                                       has_payload=False)
     return response

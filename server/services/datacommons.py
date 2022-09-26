@@ -23,6 +23,7 @@ from cache import cache
 from flask import current_app
 
 import lib.config as libconfig
+from services.discovery import get_service_url
 import requests
 
 cfg = libconfig.get_config()
@@ -30,6 +31,9 @@ cfg = libconfig.get_config()
 API_ROOT = cfg.API_ROOT
 
 # --------------------------------- CONSTANTS ---------------------------------
+
+# Internal apis
+INTERNAL_ENDPOINTS = {'internal_stat_vars': '/place/stat-vars'}
 
 # REST API endpoint paths
 API_ENDPOINTS = {
@@ -53,7 +57,10 @@ API_ENDPOINTS = {
     'get_statvar_path': '/stat-var/path',
     'search_statvar': '/stat-var/search',
     'match_statvar': '/stat-var/match',
+    'get_stat_vars_union': '/v1/place/stat-vars/union',
     'get_statvar_summary': '/stat-var/summary',
+    'bio': '/internal/bio',
+    'landing_page': '/landing-page',
     'version': '/version',
 }
 
@@ -65,8 +72,7 @@ _MAX_LIMIT = 100
 
 # Cache for one day.
 @cache.memoize(timeout=3600 * 24)
-def get(path):
-    url = API_ROOT + path
+def get(url: str):
     headers = {'Content-Type': 'application/json'}
     dc_api_key = current_app.config.get('DC_API_KEY', '')
     if dc_api_key:
@@ -82,19 +88,18 @@ def get(path):
     return response.json()
 
 
-def post(path, req):
+def post(url: str, req):
     # Get json string so the request can be flask cached.
     # Also to have deterministic req string, the repeated fields in request
     # are sorted.
     req_str = json.dumps(req, sort_keys=True)
-    return post_wrapper(path, req_str)
+    return post_wrapper(url, req_str)
 
 
 # Cache for one day.
 @cache.memoize(timeout=3600 * 24)
-def post_wrapper(path, req_str):
+def post_wrapper(url: str, req_str):
     req = json.loads(req_str)
-    url = API_ROOT + path
     headers = {'Content-Type': 'application/json'}
     dc_api_key = current_app.config.get('DC_API_KEY', '')
     if dc_api_key:
@@ -129,8 +134,9 @@ def points_within(parent_place, child_type, stat_vars, date, all):
         in https://github.com/datacommonsorg/mixer/blob/master/proto/v1/observations.proto for the definition of these dicts)
 
     """
+    url = get_service_url('points_within')
     return post(
-        '/v1/bulk/observations/point/linked', {
+        url, {
             'linked_entity': parent_place,
             'linked_property': "containedInPlace",
             'entity_type': child_type,
@@ -150,8 +156,9 @@ def series_within(parent_place, child_type, stat_vars, all):
         stat_vars: List of statistical variable DCIDs each as a string.
         all (optional): Whether or not to get data for all facets
     """
+    url = series_within('series_within')
     return post(
-        '/v1/bulk/observations/series/linked', {
+        url, {
             'linked_entity': parent_place,
             'linked_property': "containedInPlace",
             'entity_type': child_type,
@@ -208,7 +215,7 @@ def resolve_id(in_ids, in_prop, out_prop):
 
 # =======================   V0 V0 V0 ================================
 def search(query_text, max_results):
-    req_url = API_ROOT + API_ENDPOINTS['search']
+    req_url = get_service_url('search')
     req_url += '?query={}&max_results={}'.format(
         urllib.parse.quote(query_text.replace(',', ' ')), max_results)
     response = requests.get(req_url)
@@ -221,18 +228,18 @@ def search(query_text, max_results):
 
 
 def translate(sparql, mapping):
-    url = API_ROOT + API_ENDPOINTS['translate']
+    url = get_service_url('translate')
     req_json = {'schema_mapping': mapping, 'sparql': sparql}
     return send_request(url, req_json=req_json, has_payload=False)
 
 
 def version():
-    url = API_ROOT + API_ENDPOINTS['version']
+    url = get_service_url('version')
     return send_request(url, req_json={}, post=False, has_payload=False)
 
 
 def get_stat_set_series(places, stat_vars):
-    url = API_ROOT + API_ENDPOINTS['get_stat_set_series']
+    url = get_service_url('get_stat_set_series')
     req_json = {
         'places': places,
         'stat_vars': stat_vars,
@@ -241,7 +248,7 @@ def get_stat_set_series(places, stat_vars):
 
 
 def get_stats_all(place_dcids, stat_vars):
-    url = API_ROOT + API_ENDPOINTS['get_stats_all']
+    url = get_service_url('get_stats_all')
     req_json = {
         'places': place_dcids,
         'stat_vars': stat_vars,
@@ -252,7 +259,7 @@ def get_stats_all(place_dcids, stat_vars):
 def get_stats_value(place, stat_var, date, measurement_method,
                     observation_period, unit, scaling_factor):
     """See https://docs.datacommons.org/api/rest/stat_value.html."""
-    url = API_ROOT + API_ENDPOINTS['get_stats_value']
+    url = get_service_url('get_stats_value')
     req_json = {
         'place': place,
         'stat_var': stat_var,
@@ -282,7 +289,7 @@ def get_stat_set_within_place(parent_place, child_type, stat_vars, date):
         for the definition of the inner dicts. In particular, the values for "val"
         are dicts keyed by child place DCIDs with the statvar values as values.
     """
-    url = API_ROOT + API_ENDPOINTS['get_stat_set_within_place']
+    url = get_service_url('get_stat_set_within_place')
     req_json = {
         'parent_place': parent_place,
         'child_type': child_type,
@@ -303,7 +310,7 @@ def get_stat_set_within_place_all(parent_place, child_type, stat_vars, date):
         stat_vars: List of statistical variable DCIDs each as a string.
         date (optional): Date as a string of the form YYYY-MM-DD where MM and DD are optional.
     """
-    url = API_ROOT + API_ENDPOINTS['get_stat_set_within_place_all']
+    url = get_service_url('get_stat_set_within_place_all')
     req_json = {
         'parent_place': parent_place,
         'child_type': child_type,
@@ -322,7 +329,7 @@ def get_stat_set_series_within_place(parent_place, child_type, stat_vars):
         child_type: Type of child places as a string.
         stat_vars: List of statistical variable DCIDs each as a string.
     """
-    url = API_ROOT + API_ENDPOINTS['get_stat_set_series_within_place']
+    url = get_service_url('get_stat_set_series_within_place')
     req_json = {
         'parent_place': parent_place,
         'child_type': child_type,
@@ -332,7 +339,7 @@ def get_stat_set_series_within_place(parent_place, child_type, stat_vars):
 
 
 def get_stat_set(places, stat_vars, date=None):
-    url = API_ROOT + API_ENDPOINTS['get_stat_set']
+    url = get_service_url('get_stat_set')
     req_json = {
         'places': places,
         'stat_vars': stat_vars,
@@ -345,7 +352,7 @@ def get_place_ranking(stat_vars,
                       place_type,
                       within_place=None,
                       is_per_capita=False):
-    url = API_ROOT + API_ENDPOINTS['get_place_ranking']
+    url = get_service_url('get_place_ranking')
     req_json = {
         'stat_var_dcids': stat_vars,
         'place_type': place_type,
@@ -357,7 +364,7 @@ def get_place_ranking(stat_vars,
 
 def get_property_labels(dcids):
     # Generate the GetProperty query and send the request
-    url = API_ROOT + API_ENDPOINTS['get_property_labels']
+    url = get_service_url('get_property_labels')
     payload = send_request(url, req_json={'dcids': dcids})
 
     # Return the results based on the orientation
@@ -378,7 +385,7 @@ def get_property_values(dcids,
         req_json['value_type'] = value_type
 
     # Send the request
-    url = API_ROOT + API_ENDPOINTS['get_property_values']
+    url = get_service_url('get_property_values')
     payload = send_request(url, req_json=req_json)
 
     # Create the result format for when dcids is provided as a list.
@@ -405,7 +412,7 @@ def get_property_values(dcids,
 
 def get_places_in(dcids, place_type):
     # Convert the dcids field and format the request to GetPlacesIn
-    url = API_ROOT + API_ENDPOINTS['get_places_in']
+    url = get_service_url('get_places_in')
     payload = send_request(url,
                            req_json={
                                'dcids': dcids,
@@ -422,8 +429,8 @@ def query(query_string):
     # Get the API Key and perform the POST request.
     logging.info("[ Mixer Request ]: \n" + query_string)
     headers = {'Content-Type': 'application/json'}
-    req_url = API_ROOT + API_ENDPOINTS['query']
-    response = requests.post(req_url,
+    url = get_service_url('query')
+    response = requests.post(url,
                              json={'sparql': query_string},
                              headers=headers,
                              timeout=60)
@@ -437,7 +444,7 @@ def query(query_string):
 
 
 def get_related_place(dcid, stat_vars, within_place=None, is_per_capita=None):
-    url = API_ROOT + API_ENDPOINTS['get_related_places']
+    url = get_service_url('get_related_places')
     req_json = {'dcid': dcid, 'stat_var_dcids': stat_vars}
     if within_place:
         req_json['within_place'] = within_place
@@ -447,7 +454,7 @@ def get_related_place(dcid, stat_vars, within_place=None, is_per_capita=None):
 
 
 def search_statvar(query, places, sv_only):
-    url = API_ROOT + API_ENDPOINTS['search_statvar']
+    url = get_service_url('search_statvar')
     req_json = {
         'query': query,
         'places': places,
@@ -457,7 +464,7 @@ def search_statvar(query, places, sv_only):
 
 
 def match_statvar(query: str, limit: int, debug: bool):
-    url = API_ROOT + API_ENDPOINTS['match_statvar']
+    url = get_service_url('match_statvar')
     req_json = {
         'query': query,
         'limit': limit,
@@ -467,7 +474,7 @@ def match_statvar(query: str, limit: int, debug: bool):
 
 
 def get_statvar_group(stat_var_group, entities):
-    url = API_ROOT + API_ENDPOINTS['get_statvar_group']
+    url = get_service_url('get_statvar_group')
     req_json = {
         'stat_var_group': stat_var_group,
         'entities': entities,
@@ -476,7 +483,7 @@ def get_statvar_group(stat_var_group, entities):
 
 
 def get_statvar_path(id):
-    url = API_ROOT + API_ENDPOINTS['get_statvar_path']
+    url = get_service_url('get_get_statvar_pathst')
     req_json = {
         'id': id,
     }
@@ -484,7 +491,7 @@ def get_statvar_path(id):
 
 
 def get_statvar_summary(dcids):
-    url = API_ROOT + API_ENDPOINTS['get_statvar_summary']
+    url = get_service_url('get_statvar_summary')
     req_json = {
         'stat_vars': dcids,
     }
@@ -529,9 +536,8 @@ def send_request(req_url,
     return res_json
 
 
-def fetch_data(path, req_json, compress, post, has_payload=True):
-    req_url = API_ROOT + path
-    return send_request(req_url, req_json, compress, post, has_payload)
+# def fetch_data(url, req_json, compress, post, has_payload=True):
+#     return send_request(url, req_json, compress, post, has_payload)
 
 
 def _format_expand_payload(payload, new_key, must_exist=[]):

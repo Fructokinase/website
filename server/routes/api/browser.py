@@ -54,12 +54,13 @@ def provenance():
 @bp.route('/propvals/<path:prop>/<path:dcid>')
 def get_property_value(dcid, prop):
     """Returns the property values for a given node dcid and property label."""
-    response = dc.fetch_data('/node/property-values', {
+    response = dc.send_request('get_property_values', {
         'dcids': [dcid],
         'property': prop,
     },
-                             compress=False,
-                             post=False)
+                               compress=False,
+                               post=False,
+                               has_payload=True)
     result = {}
     result["property"] = prop
     result["values"] = response.get(dcid, {})
@@ -141,4 +142,6 @@ def get_num_stat_vars(dcid):
     """
     stat_vars = place_api.stat_vars(dcid)
     num_stat_vars = len(stat_vars)
-    return Response(json.dumps(num_stat_vars), 200, mimetype='application/json')
+    return Response(json.dumps(num_stat_vars),
+                    200,
+                    mimetype='application/json')

@@ -19,8 +19,7 @@ from unittest.mock import patch
 
 
 class TestCachedName(unittest.TestCase):
-
-    @patch('routes.api.shared.fetch_data')
+    @patch('routes.api.shared.send_request')
     def test_cached_name(self, mock_data_fetcher):
         dcid1 = 'geoId/06'
         dcid2 = 'geoId/07'
@@ -50,7 +49,6 @@ class TestCachedName(unittest.TestCase):
 
 
 class TestIsFloat(unittest.TestCase):
-
     def test_is_float(self):
         cases = [{
             'query': 'abc',

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from services.datacommons import fetch_data
+from services.datacommons import send_request
 from cache import cache
 """Common library for functions used by multiple tools"""
 
@@ -28,13 +28,14 @@ def cached_name(dcids):
         A dictionary of display place names, keyed by dcid.
     """
     dcids = dcids.split('^')
-    response = fetch_data('/node/property-values', {
+    response = send_request('get_property_values', {
         'dcids': dcids,
         'property': 'name',
         'direction': 'out'
     },
-                          compress=False,
-                          post=True)
+                            compress=False,
+                            post=True,
+                            has_payload=True)
     result = {}
     for dcid in dcids:
         if not dcid:

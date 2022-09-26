@@ -22,7 +22,6 @@ import routes.api.place as place_api
 
 
 class TestRoute(unittest.TestCase):
-
     @staticmethod
     def side_effect(url, req, compress, post):
         if 'containedInPlace' == req['property']:
@@ -65,7 +64,6 @@ class TestRoute(unittest.TestCase):
 
 
 class TestApiParentPlaces(unittest.TestCase):
-
     @staticmethod
     def side_effect(url, req, compress, post):
         if 'geoId/0649670' == req['dcids'][0]:
@@ -98,7 +96,7 @@ class TestApiParentPlaces(unittest.TestCase):
         else:
             return {req['dcids'][0]: {}}
 
-    @patch('routes.api.place.fetch_data')
+    @patch('routes.api.place.send_request')
     def test_parent_places(self, mock_fetch_data):
         mock_fetch_data.side_effect = self.side_effect
 
@@ -127,7 +125,6 @@ class TestApiParentPlaces(unittest.TestCase):
 
 
 class TestApiPlaceName(unittest.TestCase):
-
     @patch('routes.api.place.cached_name')
     def test_parent_places(self, mock_cached_name):
         mock_cached_name.return_value = {
@@ -147,11 +144,10 @@ class TestApiPlaceName(unittest.TestCase):
 
 
 class TestApiPlaceI18nName(unittest.TestCase):
-
     @patch('lib.i18n.AVAILABLE_LANGUAGES',
            ['en', 'io', 'la', 'la-ru', 'it', 'ru'])
     @patch('routes.api.place.cached_name')
-    @patch('routes.api.place.fetch_data')
+    @patch('routes.api.place.send_request')
     def test_parent_places(self, mock_fetch_data, mock_cached_name):
         mock_cached_name.return_value = {'geoId/08': 'Colorado'}
         mock_response = {
@@ -253,9 +249,8 @@ class TestApiPlaceI18nName(unittest.TestCase):
 
 
 class TestApiDisplayName(unittest.TestCase):
-
     @patch('routes.api.place.dc.get_property_values')
-    @patch('routes.api.place.fetch_data')
+    @patch('routes.api.place.send_request')
     def test_api_display_name(self, mock_data_fetcher, mock_iso_codes):
         dcid1 = 'dcid1'
         dcid2 = 'dcid2'
@@ -285,18 +280,22 @@ class TestApiDisplayName(unittest.TestCase):
                         ]
                     },
                     dcid2: {
-                        'out': [{
-                            'dcid': us_country_parent,
-                            'name': us_country_parent,
-                            'types': ['Country'],
-                        },]
+                        'out': [
+                            {
+                                'dcid': us_country_parent,
+                                'name': us_country_parent,
+                                'types': ['Country'],
+                            },
+                        ]
                     },
                     dcid3: {
-                        'out': [{
-                            'dcid': cad_state_parent,
-                            'name': cad_state_parent,
-                            'types': ['State'],
-                        },]
+                        'out': [
+                            {
+                                'dcid': cad_state_parent,
+                                'name': cad_state_parent,
+                                'types': ['State'],
+                            },
+                        ]
                     },
                     cad_state_parent: {
                         'out': []
@@ -347,7 +346,6 @@ class TestApiDisplayName(unittest.TestCase):
     @patch('routes.api.place.parent_places')
     def test_i18n_api_display_name(self, mock_parent_places,
                                    mock_cached_i18n_name):
-
         def side_effect(dcids, locale, should_resolve_all):
             if locale != 'fr':
                 return {}
@@ -418,10 +416,8 @@ class TestApiDisplayName(unittest.TestCase):
 
 
 class TestApiGetPlacesIn(unittest.TestCase):
-
     @patch('services.datacommons.send_request')
     def test_api_get_places_in(self, send_request):
-
         def side_effect(req_url,
                         req_json={},
                         compress=False,
@@ -513,7 +509,8 @@ class TestApiGetPlacesIn(unittest.TestCase):
 
         send_request.side_effect = side_effect
         response = app.test_client().get(
-            '/api/place/places-in?dcid=geoId/10&dcid=geoId/56&placeType=County')
+            '/api/place/places-in?dcid=geoId/10&dcid=geoId/56&placeType=County'
+        )
         assert response.status_code == 200
         assert json.loads(response.data) == {
             "geoId/10": ["geoId/10001", "geoId/10003", "geoId/10005"],
@@ -529,11 +526,9 @@ class TestApiGetPlacesIn(unittest.TestCase):
 
 
 class TestApiGetPlacesInNames(unittest.TestCase):
-
     @patch('routes.api.place.get_display_name')
     @patch('services.datacommons.send_request')
     def test_api_get_places_in_names(self, send_request, display_name):
-
         def send_request_side_effect(req_url,
                                      req_json={},
                                      compress=False,
@@ -575,7 +570,6 @@ class TestApiGetPlacesInNames(unittest.TestCase):
 
 
 class TestApiGetStatVarsUnion(unittest.TestCase):
-
     @patch('services.datacommons.send_request')
     def test_api_get_stat_vars_union(self, send_request):
         req = {
@@ -590,11 +584,11 @@ class TestApiGetStatVarsUnion(unittest.TestCase):
                         compress=False,
                         post=True,
                         has_payload=True):
-            if (req_url == dc.API_ROOT + "/v1/place/stat-vars/union" and
-                    req_json == req and post and not has_payload):
+            if (req_url == dc.API_ROOT + "/v1/place/stat-vars/union"
+                    and req_json == req and post and not has_payload):
                 return {'statVars': result}
-            if (req_url == dc.API_ROOT + "/v1/place/stat-vars/union" and
-                    req_json == req2 and post and not has_payload):
+            if (req_url == dc.API_ROOT + "/v1/place/stat-vars/union"
+                    and req_json == req2 and post and not has_payload):
                 return {}
 
         send_request.side_effect = side_effect
@@ -609,7 +603,6 @@ class TestApiGetStatVarsUnion(unittest.TestCase):
 
 
 class TestApiRankingChartHelper(unittest.TestCase):
-
     def test_get_ranking_chart_configs(self):
         config1 = {
             'category': ['Test', 'Test1'],
@@ -637,7 +630,6 @@ class TestApiRankingChartHelper(unittest.TestCase):
 
 
 class TestApiRankingChart(unittest.TestCase):
-
     @patch('routes.api.place.get_i18n_name')
     @patch('routes.api.place.get_ranking_chart_configs')
     @patch('routes.api.place.get_place_type')
@@ -738,10 +730,10 @@ class TestApiRankingChart(unittest.TestCase):
         points_within = {
             'observationsByVariable': [{
                 "variable":
-                    sv1,
+                sv1,
                 "observationsByEntity": [{
                     "entity":
-                        geo1,
+                    geo1,
                     "pointsByFacet": [{
                         'date': sv1_date1,
                         'value': sv1_value1,
@@ -749,7 +741,7 @@ class TestApiRankingChart(unittest.TestCase):
                     }]
                 }, {
                     "entity":
-                        geo2,
+                    geo2,
                     "pointsByFacet": [{
                         'date': sv1_date2,
                         'value': sv1_value2,
@@ -757,7 +749,7 @@ class TestApiRankingChart(unittest.TestCase):
                     }]
                 }, {
                     "entity":
-                        geo3,
+                    geo3,
                     "pointsByFacet": [{
                         'date': sv1_date2,
                         'value': sv1_value3,
@@ -766,10 +758,10 @@ class TestApiRankingChart(unittest.TestCase):
                 }]
             }, {
                 "variable":
-                    sv2,
+                sv2,
                 "observationsByEntity": [{
                     "entity":
-                        geo1,
+                    geo1,
                     "pointsByFacet": [{
                         'date': sv2_date1,
                         'value': sv2_value1,
@@ -777,7 +769,7 @@ class TestApiRankingChart(unittest.TestCase):
                     }]
                 }, {
                     "entity":
-                        geo2,
+                    geo2,
                     "pointsByFacet": [{
                         'date': sv2_date2,
                         'value': sv2_value2,
@@ -785,7 +777,7 @@ class TestApiRankingChart(unittest.TestCase):
                     }]
                 }, {
                     "entity":
-                        geo3,
+                    geo3,
                     "pointsByFacet": [{
                         'date': sv2_date2,
                         'value': sv2_value3,
@@ -794,10 +786,10 @@ class TestApiRankingChart(unittest.TestCase):
                 }]
             }, {
                 "variable":
-                    "Count_Person",
+                "Count_Person",
                 "observationsByEntity": [{
                     "entity":
-                        geo1,
+                    geo1,
                     "pointsByFacet": [{
                         'date': sv2_date1,
                         'value': count_person_value1,
@@ -805,7 +797,7 @@ class TestApiRankingChart(unittest.TestCase):
                     }]
                 }, {
                     "entity":
-                        geo2,
+                    geo2,
                     "pointsByFacet": [{
                         'date': sv2_date2,
                         'value': count_person_value2,
@@ -813,7 +805,7 @@ class TestApiRankingChart(unittest.TestCase):
                     }]
                 }, {
                     "entity":
-                        geo3,
+                    geo3,
                     "pointsByFacet": [{
                         'date': sv2_date1,
                         'value': count_person_value1,
@@ -849,7 +841,7 @@ class TestApiRankingChart(unittest.TestCase):
         expected_data = {
             sv1: {
                 'date':
-                    f'{sv1_date1} – {sv1_date2}',
+                f'{sv1_date1} – {sv1_date2}',
                 'data': [{
                     "rank": 1,
                     "value": sv1_value1,
@@ -862,14 +854,14 @@ class TestApiRankingChart(unittest.TestCase):
                     "placeName": place_name3
                 }],
                 'numDataPoints':
-                    2,
+                2,
                 'exploreUrl':
-                    "/ranking/sv1/place_type/parent_dcid1?h=test_dcid",
+                "/ranking/sv1/place_type/parent_dcid1?h=test_dcid",
                 'sources': [source1]
             },
             sv2: {
                 'date':
-                    f'{sv1_date1} – {sv1_date2}',
+                f'{sv1_date1} – {sv1_date2}',
                 'data': [{
                     "rank": 1,
                     "value": sv2_value3,
@@ -882,9 +874,9 @@ class TestApiRankingChart(unittest.TestCase):
                     "placeName": place_name1
                 }],
                 'numDataPoints':
-                    2,
+                2,
                 'exploreUrl':
-                    "/ranking/sv2/place_type/parent_dcid1?h=test_dcid&scaling=100&unit=%",
+                "/ranking/sv2/place_type/parent_dcid1?h=test_dcid&scaling=100&unit=%",
                 'sources': [source2]
             }
         }
@@ -956,10 +948,10 @@ class TestApiRankingChart(unittest.TestCase):
         points_within = {
             'observationsByVariable': [{
                 "variable":
-                    sv1,
+                sv1,
                 "observationsByEntity": [{
                     "entity":
-                        geo1,
+                    geo1,
                     "pointsByFacet": [{
                         'date': sv1_date1,
                         'value': sv1_value1,
@@ -967,7 +959,7 @@ class TestApiRankingChart(unittest.TestCase):
                     }]
                 }, {
                     "entity":
-                        geo2,
+                    geo2,
                     "pointsByFacet": [{
                         'date': sv1_date2,
                         'value': sv1_value2,
@@ -975,7 +967,7 @@ class TestApiRankingChart(unittest.TestCase):
                     }]
                 }, {
                     "entity":
-                        geo3,
+                    geo3,
                     "pointsByFacet": [{
                         'date': sv1_date2,
                         'value': sv1_value3,
@@ -984,10 +976,10 @@ class TestApiRankingChart(unittest.TestCase):
                 }]
             }, {
                 "variable":
-                    sv2,
+                sv2,
                 "observationsByEntity": [{
                     "entity":
-                        geo1,
+                    geo1,
                     "pointsByFacet": [{
                         'date': sv2_date1,
                         'value': sv2_value1,
@@ -995,7 +987,7 @@ class TestApiRankingChart(unittest.TestCase):
                     }]
                 }, {
                     "entity":
-                        geo2,
+                    geo2,
                     "pointsByFacet": [{
                         'date': sv2_date2,
                         'value': sv2_value2,
@@ -1003,7 +995,7 @@ class TestApiRankingChart(unittest.TestCase):
                     }]
                 }, {
                     "entity":
-                        geo3,
+                    geo3,
                     "pointsByFacet": [{
                         'date': sv2_date2,
                         'value': sv2_value3,
@@ -1012,10 +1004,10 @@ class TestApiRankingChart(unittest.TestCase):
                 }]
             }, {
                 "variable":
-                    "Count_Person",
+                "Count_Person",
                 "observationsByEntity": [{
                     "entity":
-                        geo1,
+                    geo1,
                     "pointsByFacet": [{
                         'date': sv2_date1,
                         'value': count_person_value1,
@@ -1023,7 +1015,7 @@ class TestApiRankingChart(unittest.TestCase):
                     }]
                 }, {
                     "entity":
-                        geo2,
+                    geo2,
                     "pointsByFacet": [{
                         'date': sv2_date2,
                         'value': count_person_value1,
@@ -1031,7 +1023,7 @@ class TestApiRankingChart(unittest.TestCase):
                     }]
                 }, {
                     "entity":
-                        geo3,
+                    geo3,
                     "pointsByFacet": [{
                         'date': sv2_date1,
                         'value': count_person_value2,
@@ -1066,7 +1058,8 @@ class TestApiRankingChart(unittest.TestCase):
         response_data = json.loads(response.data)
         expected_data = {
             sv1: {
-                'date': f'{sv1_date1} – {sv1_date2}',
+                'date':
+                f'{sv1_date1} – {sv1_date2}',
                 'data': [{
                     "rank": 1,
                     "value": sv1_value1,
@@ -1078,12 +1071,15 @@ class TestApiRankingChart(unittest.TestCase):
                     "placeDcid": geo2,
                     "placeName": place_name2
                 }],
-                'numDataPoints': 2,
-                'exploreUrl': "/ranking/sv1/Country?h=Earth",
+                'numDataPoints':
+                2,
+                'exploreUrl':
+                "/ranking/sv1/Country?h=Earth",
                 'sources': [source1]
             },
             sv2: {
-                'date': sv2_date1,
+                'date':
+                sv2_date1,
                 'data': [{
                     "rank": 1,
                     "value": sv2_value2,
@@ -1095,8 +1091,10 @@ class TestApiRankingChart(unittest.TestCase):
                     "placeDcid": geo1,
                     "placeName": place_name1
                 }],
-                'numDataPoints': 2,
-                'exploreUrl': "/ranking/sv2/Country?h=Earth&scaling=100&unit=%",
+                'numDataPoints':
+                2,
+                'exploreUrl':
+                "/ranking/sv2/Country?h=Earth&scaling=100&unit=%",
                 'sources': [source2]
             }
         }

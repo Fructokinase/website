@@ -19,8 +19,7 @@ from main import app
 
 
 class TestRoute(unittest.TestCase):
-
-    @patch('routes.placelist.fetch_data')
+    @patch('routes.placelist.send_request')
     def test_index(self, mock_fetch_data):
         mock_response = {
             'Country': {

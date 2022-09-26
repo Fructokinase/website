@@ -50,11 +50,11 @@ def get_landing_page_data_helper(dcid, stat_vars_string):
     data = {'place': dcid}
     if stat_vars_string:
         data['newStatVars'] = stat_vars_string.split('^')
-    response = dc_service.fetch_data('/landing-page',
-                                     data,
-                                     compress=False,
-                                     post=True,
-                                     has_payload=False)
+    response = dc_service.send_request('landing_page',
+                                       data,
+                                       compress=False,
+                                       post=True,
+                                       has_payload=False)
     return response
 
 
@@ -286,9 +286,9 @@ def get_bar(cc, data, places):
     # so client won't draw chart.
     if len(result['data']) <= 1:
         return {}
-    is_scaled = (('relatedChart' in cc and
-                  cc['relatedChart'].get('scale', False)) or
-                 ('denominator' in cc))
+    is_scaled = (('relatedChart' in cc
+                  and cc['relatedChart'].get('scale', False))
+                 or ('denominator' in cc))
     result['exploreUrl'] = build_url(places, statvar_denom, is_scaled)
     return result
 
@@ -396,8 +396,8 @@ def get_i18n_all_child_places(raw_page_data):
 
 def has_data(data):
     for item in data:
-        if (item.get('trend', {}) or item.get('similar', {}) or
-                item.get('nearyby', {}) or item.get('child', {})):
+        if (item.get('trend', {}) or item.get('similar', {})
+                or item.get('nearyby', {}) or item.get('child', {})):
             return True
     return False
 
@@ -531,7 +531,8 @@ def data(dcid):
     # Get chart category name translations
     categories = {}
     for category in list(spec_and_stat.keys()) + list(spec_and_stat[OVERVIEW]):
-        categories[category] = gettext(f'CHART_TITLE-CHART_CATEGORY-{category}')
+        categories[category] = gettext(
+            f'CHART_TITLE-CHART_CATEGORY-{category}')
 
     # Get display name for all places
     all_places = [dcid]

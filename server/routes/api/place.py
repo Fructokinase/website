@@ -23,7 +23,7 @@ from flask_babel import gettext
 from cache import cache
 import routes.api.shared as shared_api
 import services.datacommons as dc
-from services.datacommons import fetch_data
+from services.datacommons import send_request
 from routes.api.shared import cached_name
 import routes.api.stats as stats_api
 import lib.i18n as i18n
@@ -32,9 +32,8 @@ CHILD_PLACE_LIMIT = 50
 
 # Place types to keep for list of child places, keyed by parent place type.
 WANTED_PLACE_TYPES = {
-    'Country': [
-        "State", "EurostatNUTS1", "EurostatNUTS2", "AdministrativeArea1"
-    ],
+    'Country':
+    ["State", "EurostatNUTS1", "EurostatNUTS2", "AdministrativeArea1"],
     'State': ["County"],
     'County': ["City", "Town", "Village", "Borough"],
 }
@@ -168,13 +167,14 @@ def cached_i18n_name(dcids, locale, should_resolve_all):
     if not dcids:
         return {}
     dcids = dcids.split('^')
-    response = fetch_data('/node/property-values', {
+    response = send_request('get_property_values', {
         'dcids': dcids,
         'property': 'nameWithLanguage',
         'direction': 'out'
     },
-                          compress=False,
-                          post=True)
+                            compress=False,
+                            post=True,
+                            has_payload=True)
     result = {}
     dcids_default_name = []
     locales = i18n.locale_choices(locale)
@@ -256,12 +256,12 @@ def stat_vars(dcid):
     """
     Get all the statistical variable dcids for a place.
     """
-    response = fetch_data('/place/stat-vars', {
+    response = send_request('internal_stat_vars', {
         'dcids': [dcid],
     },
-                          compress=False,
-                          post=False,
-                          has_payload=False)
+                            compress=False,
+                            post=False,
+                            has_payload=False)
     return response['places'][dcid].get('statVars', [])
 
 
@@ -278,13 +278,13 @@ def get_stat_vars_union(places, stat_vars):
     """
     places = places.split("^")
     # The two indexings are due to how protobuf fields are converted to json
-    return fetch_data('/v1/place/stat-vars/union', {
+    return send_request('get_stat_vars_union', {
         'dcids': places,
         'statVars': stat_vars,
     },
-                      compress=False,
-                      post=True,
-                      has_payload=False).get('statVars', [])
+                        compress=False,
+                        post=True,
+                        has_payload=False).get('statVars', [])
 
 
 @bp.route('/stat-vars/union', methods=['POST'])
@@ -297,7 +297,8 @@ def get_stat_vars_union_route():
     dcids = sorted(request.json.get('dcids', []))
     stat_vars = (request.json.get('statVars', []))
 
-    return Response(json.dumps(get_stat_vars_union("^".join(dcids), stat_vars)),
+    return Response(json.dumps(get_stat_vars_union("^".join(dcids),
+                                                   stat_vars)),
                     200,
                     mimetype='application/json')
 
@@ -318,22 +319,24 @@ def child(dcid):
 # TODO(hanlu): get nameWithLanguage instead of using name.
 @cache.memoize(timeout=3600 * 24)  # Cache for one day.
 def child_fetch(dcid):
-    contained_response = fetch_data('/node/property-values', {
+    contained_response = send_request('get_property_values', {
         'dcids': [dcid],
         'property': 'containedInPlace',
         'direction': 'in'
     },
-                                    compress=False,
-                                    post=True)
+                                      compress=False,
+                                      post=True,
+                                      has_payload=True)
     places = contained_response[dcid].get('in', [])
 
-    overlaps_response = fetch_data('/node/property-values', {
+    overlaps_response = send_request('get_property_values', {
         'dcids': [dcid],
         'property': 'geoOverlaps',
         'direction': 'in'
     },
-                                   compress=False,
-                                   post=True)
+                                     compress=False,
+                                     post=True,
+                                     has_payload=True)
     places = places + overlaps_response[dcid].get('in', [])
 
     dcid_str = '^'.join(sorted(map(lambda x: x['dcid'], places)))
@@ -350,9 +353,12 @@ def child_fetch(dcid):
                 continue
             if place_type in wanted_types and place_pop > 0:
                 result[place_type].append({
-                    'name': place.get('name', place['dcid']),
-                    'dcid': place['dcid'],
-                    'pop': place_pop,
+                    'name':
+                    place.get('name', place['dcid']),
+                    'dcid':
+                    place['dcid'],
+                    'pop':
+                    place_pop,
                 })
 
     # Filter equivalent place types - if a child place occurs in multiple groups, keep it in the preferred group type.
@@ -437,13 +443,14 @@ def get_parent_place(dcids):
         dcids = dcids.split('^')
     else:
         dcids = []
-    response = fetch_data('/node/property-values', {
+    response = send_request('get_property_values', {
         'dcids': dcids,
         'property': 'containedInPlace',
         'direction': 'out'
     },
-                          compress=False,
-                          post=True)
+                            compress=False,
+                            post=True,
+                            has_payload=True)
     result = {}
     for dcid in dcids:
         parents = response[dcid].get('out', [])
@@ -580,7 +587,7 @@ def api_ranking(dcid):
     crime_statsvar = {
         # TRANSLATORS: Label for rankings of places by the number of combined criminal activities, per capita (sorted from highest to lowest).
         'Count_CriminalActivities_CombinedCrime':
-            gettext('Highest Crime Per Capita')
+        gettext('Highest Crime Per Capita')
     }
     for parent_dcid in selected_parents:
         stat_vars_string = '^'.join(ranking_stats.keys())
@@ -590,12 +597,12 @@ def api_ranking(dcid):
         for stat_var, data in response.get('data', {}).items():
             result[ranking_stats[stat_var]].append({
                 'name':
-                    parent_names[parent_dcid],
+                parent_names[parent_dcid],
                 'data':
-                    data,
+                data,
                 'rankingUrl':
-                    get_ranking_url(parent_dcid, current_place_type, stat_var,
-                                    dcid)
+                get_ranking_url(parent_dcid, current_place_type, stat_var,
+                                dcid)
             })
         response = get_related_place(dcid,
                                      '^'.join(crime_statsvar.keys()),
@@ -604,15 +611,15 @@ def api_ranking(dcid):
         for stat_var, data in response.get('data', {}).items():
             result[crime_statsvar[stat_var]].append({
                 'name':
-                    parent_names[parent_dcid],
+                parent_names[parent_dcid],
                 'data':
-                    data,
+                data,
                 'rankingUrl':
-                    get_ranking_url(parent_dcid,
-                                    current_place_type,
-                                    stat_var,
-                                    dcid,
-                                    is_per_capita=True)
+                get_ranking_url(parent_dcid,
+                                current_place_type,
+                                stat_var,
+                                dcid,
+                                is_per_capita=True)
             })
 
     all_labels = list(ranking_stats.values()) + \
@@ -646,7 +653,7 @@ def get_state_code(dcids):
         if iso_code:
             split_iso_code = iso_code[0].split("-")
             if len(split_iso_code
-                  ) > 1 and split_iso_code[0] == US_ISO_CODE_PREFIX:
+                   ) > 1 and split_iso_code[0] == US_ISO_CODE_PREFIX:
                 state_code = split_iso_code[1]
         result[dcid] = state_code
 
@@ -802,8 +809,8 @@ def api_ranking_chart(dcid):
                 parent_type = parent_type_list[0]
                 # All wanted place types plus continent except CensusZipCodeTabulationArea.
                 if parent_type == "Continent" or (
-                        parent_type in ALL_WANTED_PLACE_TYPES and
-                        parent_type != "CensusZipCodeTabulationArea"):
+                        parent_type in ALL_WANTED_PLACE_TYPES
+                        and parent_type != "CensusZipCodeTabulationArea"):
                     break
         # If break is not encountered, return empty result.
         else:

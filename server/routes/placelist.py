@@ -19,7 +19,7 @@ from flask import render_template
 
 from cache import cache
 from routes.api.place import child_fetch
-from services.datacommons import fetch_data
+from services.datacommons import send_request
 
 # Define blueprint
 bp = Blueprint(
@@ -31,13 +31,14 @@ bp = Blueprint(
 @bp.route('/placelist')
 @cache.memoize(timeout=3600 * 24)  # Cache for one day.
 def index():
-    response = fetch_data('/node/property-values', {
+    response = send_request('get_property_values', {
         'dcids': ['Country'],
         'property': 'typeOf',
         'direction': 'in'
     },
-                          compress=False,
-                          post=True)
+                            compress=False,
+                            post=True,
+                            has_payload=True)
     countries = {'Country': []}
     for place in response['Country']['in']:
         countries['Country'].append({

@@ -26,7 +26,6 @@ from unittest.mock import patch
 
 
 class TestBuildSpec(unittest.TestCase):
-
     def setUp(self):
         app = Flask(__name__)
         Babel(app, default_domain='all')
@@ -89,7 +88,6 @@ class TestBuildSpec(unittest.TestCase):
 
 
 class TestI18n(unittest.TestCase):
-
     def setUp(self):
         app = Flask(__name__)
         Babel(app, default_domain='all')
@@ -121,7 +119,7 @@ class TestI18n(unittest.TestCase):
             "geoId/0684536": {}
         }
 
-    @patch('routes.api.place.fetch_data')
+    @patch('routes.api.place.send_request')
     def test_child_places_i18n(self, mock_fetch_data):
         mock_fetch_data.side_effect = self.side_effect
 

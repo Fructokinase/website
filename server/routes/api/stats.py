@@ -50,8 +50,8 @@ def get_stats_latest(dcid_str, stat_var):
     response = json.loads(get_stats_wrapper(dcid_str, stat_var))
     result = {}
     for dcid, stats in response.items():
-        if (not stats or not 'data' in stats or stat_var not in stats['data'] or
-                'val' not in stats['data'][stat_var]):
+        if (not stats or not 'data' in stats or stat_var not in stats['data']
+                or 'val' not in stats['data'][stat_var]):
             result[dcid] = 0
         else:
             data = stats['data'][stat_var]['val']
@@ -111,11 +111,12 @@ def stats_var_property():
 
 def stats_var_property_wrapper(dcids):
     """Function to get properties for given statistical variables."""
-    data = dc.fetch_data('/node/triples', {
+    data = dc.send_request('get_triples', {
         'dcids': dcids,
     },
-                         compress=False,
-                         post=True)
+                           compress=False,
+                           post=True,
+                           has_payload=True)
     ranked_statvars = current_app.config['RANKED_STAT_VARS']
     result = {}
     # Get all the constraint properties
@@ -388,9 +389,10 @@ def get_place_stat_date_within_place():
     """
     ancestor_place = request.args.get('ancestorPlace')
     if not ancestor_place:
-        return Response(json.dumps('error: must provide a ancestorPlace field'),
-                        400,
-                        mimetype='application/json')
+        return Response(
+            json.dumps('error: must provide a ancestorPlace field'),
+            400,
+            mimetype='application/json')
     child_place_type = request.args.get('childPlaceType')
     if not child_place_type:
         return Response(
@@ -402,15 +404,15 @@ def get_place_stat_date_within_place():
         return Response(json.dumps('error: must provide a statVars field'),
                         400,
                         mimetype='application/json')
-    response = dc.fetch_data('/v1/stat/date/within-place',
-                             req_json={
-                                 'ancestor_place': ancestor_place,
-                                 'childPlaceType': child_place_type,
-                                 'stat_vars': stat_vars,
-                             },
-                             compress=False,
-                             post=False,
-                             has_payload=False)
+    response = dc.send_request('v1_get_stat_set_within_place',
+                               req_json={
+                                   'ancestor_place': ancestor_place,
+                                   'childPlaceType': child_place_type,
+                                   'stat_vars': stat_vars,
+                               },
+                               compress=False,
+                               post=False,
+                               has_payload=False)
     return Response(json.dumps(response), 200, mimetype='application/json')
 
 
@@ -420,7 +422,7 @@ def get_variable_facets_from_series(series_response):
 
     Args:
         series_response: the response from a dc.series_within call.
-    
+
     Returns:
         a dict of sv to dict of facet id to facet information:
             {
@@ -454,7 +456,7 @@ def get_variable_facets_from_points(points_response):
 
     Args:
         points_response: the response from a dc.points_within call.
-    
+
     Returns:
         a dict of sv to dict of facet id to facet information:
             {
@@ -793,8 +795,8 @@ def is_valid_get_csv_date(date):
         2. "latest" or
         3. of the form "YYYY" or "YYYY-MM" or "YYYY-MM-DD"
     """
-    if not date or date == "latest" or re.match(r"^(\d\d\d\d)(-\d\d)?(-\d\d)?$",
-                                                date):
+    if not date or date == "latest" or re.match(
+            r"^(\d\d\d\d)(-\d\d)?(-\d\d)?$", date):
         return True
     return False
 
