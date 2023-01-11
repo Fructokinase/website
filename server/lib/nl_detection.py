@@ -35,6 +35,7 @@ class PlaceDetection:
   places_found: List[str]
   main_place: Place
   using_default_place: bool
+  using_from_context: bool = False
 
 
 @dataclass
@@ -65,6 +66,16 @@ class RankingType(Enum):
   # "least amount of ..."
   LOW = 2
 
+  # BEST is for queries with the word "best"
+  # Necessary for processing SVs with negative intent
+  # Ex: "Best cities by crime" -> show LOW crime cities
+  BEST = 3
+
+  # WORST is for queries with the word "worst"
+  # Necessary for processing SVs wth negative intent
+  # Ex: "Worst cities by crime" -> show HIGH crime cities
+  WORST = 4
+
 
 class ContainedInPlaceType(Enum):
   """ContainedInPlaceType indicates the type of places."""
@@ -89,7 +100,7 @@ class PeriodType(Enum):
 
 
 class ClassificationAttributes(ABC):
-  """Abctract class to hold classification attributes."""
+  """Abstract class to hold classification attributes."""
   pass
 
 
@@ -126,8 +137,8 @@ class ContainedInClassificationAttributes(ClassificationAttributes):
 
 
 @dataclass
-class CorrelationClassificationAttributes(ClassificationAttributes):
-  """Correlation classification attributes."""
+class ClusteringClassificationAttributes(ClassificationAttributes):
+  """Clustering-based Correlation classification attributes."""
   sv_dcid_1: str
   sv_dcid_2: str
 
@@ -144,6 +155,15 @@ class CorrelationClassificationAttributes(ClassificationAttributes):
   cluster_2_svs: List[str]
 
 
+@dataclass
+class CorrelationClassificationAttributes(ClassificationAttributes):
+  """Heuristic-based Correlation classification attributes"""
+
+  # Words that may have implied clustering, e.g.
+  # "correlation between ...", "related to .."
+  correlation_trigger_words: str
+
+
 class ClassificationType(Enum):
   OTHER = 0
   SIMPLE = 1
@@ -151,6 +171,7 @@ class ClassificationType(Enum):
   TEMPORAL = 3
   CONTAINED_IN = 4
   CORRELATION = 5
+  CLUSTERING = 6
 
 
 @dataclass

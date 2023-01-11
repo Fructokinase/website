@@ -19,7 +19,7 @@ import logging
 import pandas as pd
 
 from lib.nl_detection import ClassificationType, Detection
-from lib import nl_variable
+from lib import nl_variable, nl_topic
 import services.datacommons as dc
 
 
@@ -49,6 +49,7 @@ class DataSpec:
   nearby_place_spec: NearbyPlaceSpec
   contained_place_spec: ContainedPlaceSpec
   selected_svs: List[str]
+  topic_svs: List[str]  # Will still contain svpg's
   expanded_svs: List[str]
   extended_sv_map: Dict[str, List[str]]
   primary_sv: str
@@ -87,7 +88,9 @@ def _highlight_svs(sv_df):
 
 
 def _sample_child_place(main_place_dcid, contained_place_type):
-  # Find child place, this is
+  # Find a sampled child place
+  if contained_place_type == "City":
+    return "geoId/0667000"
   child_places = dc.get_places_in([main_place_dcid], contained_place_type)
   if child_places.get(main_place_dcid):
     return child_places[main_place_dcid][0]
@@ -132,6 +135,7 @@ def compute(query_detection: Detection):
 
   # Filter SVs based on scores.
   highlight_svs = _highlight_svs(svs_df)
+  topic_svs = nl_topic.get_topics(highlight_svs)
   expanded_svgs = nl_variable.expand_svg(
       [x for x in highlight_svs if x.startswith("dc/g")])
   selected_svs = []
@@ -167,7 +171,11 @@ def compute(query_detection: Detection):
   # stat vars "a little bit"
 
   # Get extended stat var list
-  extended_sv_map = nl_variable.extend_svs(selected_svs)
+  if topic_svs:
+    selected_svs = topic_svs.copy()
+    extended_sv_map = nl_topic.get_topic_peers(topic_svs)
+  else:
+    extended_sv_map = nl_variable.extend_svs(selected_svs)
   all_svs = selected_svs + expanded_svs
   for sv, svs in extended_sv_map.items():
     all_svs.extend(svs)
@@ -183,6 +191,7 @@ def compute(query_detection: Detection):
                            svs=[]),
                        selected_svs=selected_svs,
                        expanded_svs=expanded_svs,
+                       topic_svs=topic_svs,
                        extended_sv_map=extended_sv_map,
                        primary_sv="",
                        primary_sv_siblings=[])
@@ -198,6 +207,10 @@ def compute(query_detection: Detection):
     all_places.append(sample_child_place)
 
   sv_existence = dc.observation_existence(all_svs, all_places)
+  if not sv_existence:
+    logging.info("Existence checks for SVs failed.")
+    return data_spec
+
   for sv in all_svs:
     for place, exist in sv_existence['variable'][sv]['entity'].items():
       if not exist:
@@ -213,7 +226,8 @@ def compute(query_detection: Detection):
 
   # Find the first sv, it may not have data for main place
   # But this logic might change.
-  data_spec.primary_sv = data_spec.selected_svs[0]
-  data_spec.primary_sv_siblings = data_spec.extended_sv_map[selected_svs[0]]
+  data_spec.primary_sv = data_spec.main_place_spec.svs[0]
+  data_spec.primary_sv_siblings = data_spec.extended_sv_map[
+      data_spec.primary_sv]
 
   return data_spec
