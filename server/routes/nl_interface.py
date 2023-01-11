@@ -35,6 +35,7 @@ from config import subject_page_pb2
 bp = Blueprint('nl', __name__, url_prefix='/nl')
 
 MAPS_API = "https://maps.googleapis.com/maps/api/place/textsearch/json?"
+# MAPS_API = "https://maps.googleapis.com/maps/api/place/textsearch/json?location=39.8283,98.5795&"
 FIXED_PREFIXES = ['md=', 'mq=', 'st=', 'mp=', 'pt=']
 FIXED_PROPS = set([p[:-1] for p in FIXED_PREFIXES])
 
@@ -289,7 +290,7 @@ def _peer_buckets(sv2definition, svs_list):
 
 def _maps_place(place_str):
   api_key = current_app.config["MAPS_API_KEY"]
-  url_formatted = f"{MAPS_API}input={place_str}&key={api_key}"
+  url_formatted = f"{MAPS_API}query={place_str}&key={api_key}"
   r = requests.get(url_formatted)
   resp = r.json()
 
@@ -470,6 +471,8 @@ def _detection(orig_query, cleaned_query, embeddings_build,
       place_name_to_use = recent_context.get('place_name')
 
     place_dcid = _infer_place_dcid([place_name_to_use])
+    # import pdb
+    # pdb.set_trace()
     if place_name_to_use == default_place:
       using_default_place = True
       logging.info(
