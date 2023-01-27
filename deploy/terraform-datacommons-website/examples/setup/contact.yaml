@@ -1,0 +1,10 @@
+allContacts:
+  email: 'alexyfchen@google.com'
+  phoneNumber: '+1.6502530000'
+  postalAddress:
+    regionCode: 'US'
+    postalCode: '94043'
+    administrativeArea: 'CA'
+    locality: 'Mountain View'
+    addressLines: ['1600 Amphitheatre Pkwy']
+    recipients: ['Datacommons Team']

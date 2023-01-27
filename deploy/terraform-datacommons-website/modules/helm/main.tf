@@ -25,7 +25,7 @@ terraform {
 }
 
 resource "helm_release" "datcom_website" {
-  name       = "datcom-website"
+  name       = var.helm_release_name
   chart      = "../../../helm_charts/dc_website"
 
   cleanup_on_fail = true
@@ -34,6 +34,11 @@ resource "helm_release" "datcom_website" {
   # Helm has a default timeout of 300 seconds.
   # To change that, uncomment the line below and set a value.
   # timeout    = 300
+
+  set {
+    name  = "namespace.name"
+    value = var.k8s_namespace
+  }
 
   set {
     name  = "website.githash"

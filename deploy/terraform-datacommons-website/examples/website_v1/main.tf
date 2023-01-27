@@ -15,11 +15,14 @@
  */
 locals {
   resource_suffix    = var.use_resource_suffix ? format("-%s", var.resource_suffix) : ""
+
   web_robot_sa_email = (
     var.web_robot_sa_email != null ?
     var.web_robot_sa_email :
     format("website-robot@%s.iam.gserviceaccount.com", var.project_id)
   )
+
+  k8s_namespace      = var.use_resource_suffix ? var.resource_suffix : "website"
 }
 
 resource "google_project_iam_member" "web_robot_iam" {
@@ -59,18 +62,23 @@ module "apikeys" {
 }
 
 module "esp" {
+  count                    = var.deploy_esp ? 1 : 0
   source                   =  "../../modules/esp"
   project_id               = var.project_id
 }
 
 module "cluster" {
-  source                   =  "../../modules/gke"
-  project_id               = var.project_id
-  region                   = var.region
-  cluster_name_prefix      = var.cluster_name_prefix
-  web_robot_sa_email       = local.web_robot_sa_email
+  create_gke_cluster        = var.create_gke_cluster
+  k8s_namespace             = local.k8s_namespace
+  source                    =  "../../modules/gke"
+  project_id                = var.project_id
+  region                    = var.region
+  existing_gke_cluster_name = var.existing_gke_cluster_name
+  # cluster_name_prefix is ignored if existing_gke_cluster_name is specified.
+  cluster_name_prefix       = var.cluster_name_prefix
+  web_robot_sa_email        = local.web_robot_sa_email
 
-  resource_suffix          = local.resource_suffix
+  resource_suffix           = local.resource_suffix
 
   depends_on = [
     module.apikeys,
@@ -127,6 +135,8 @@ module "k8s_resources" {
   source                   =  "../../modules/helm"
   project_id               = var.project_id
 
+  helm_release_name        = format("datcom-website%s", local.resource_suffix)
+  k8s_namespace            = local.k8s_namespace
   cluster_name             = module.cluster.name
   cluster_region           = var.region
   dc_website_domain        = var.dc_website_domain

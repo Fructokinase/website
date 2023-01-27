@@ -116,3 +116,9 @@ variable "resource_bucket_location" {
   description = "The location of the resource buckets. Can either be regional or multi-regional."
   default     = "us"
 }
+
+variable "resource_suffix" {
+  type        = string
+  description = "Custom resource suffix for all GCP resources."
+  default     = ""
+}

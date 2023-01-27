@@ -23,11 +23,27 @@ variable "region" {
   default     = "us-central1"
 }
 
+variable "create_gke_cluster" {
+  type        = bool
+  description = "Whether to create a new GKE cluster or not."
+  default     = true
+}
+
+variable "existing_gke_cluster_name" {
+  type        = string
+  description = "Name of existing GKE cluster if create_gke_cluster is false."
+  default     = null
+}
 
 variable "cluster_name_prefix" {
   type        = string
   description = "Prefix of the GKE cluster (to be used by the DC website) to create."
   default     = "datacommons"
+}
+
+variable "k8s_namespace" {
+  type        = string
+  description = "k8s namespace to install the DC k8s resources in. Will be created if DNE."
 }
 
 variable "num_nodes" {

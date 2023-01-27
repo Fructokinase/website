@@ -13,6 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+ variable "helm_release_name" {
+  type        = string
+  description = "Helm release name. Required to be non-default values for same cluster deployments."
+  default     = "datcom-website"
+}
+
  variable "cluster_name" {
   type        = string
   description = "Name of the GKE cluster to deploy the helm chart to."
@@ -26,6 +32,12 @@ variable "cluster_region" {
 variable "project_id" {
   type        = string
   description = "Project id of the GCP project where the website is to be set up."
+}
+
+variable "k8s_namespace" {
+  type        = string
+  description = "k8s namespace to deploy all resources to. It is assumed to exist."
+  default     = "website"
 }
 
 variable "dc_website_domain" {

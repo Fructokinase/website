@@ -1,0 +1,5 @@
+project_id="datcom-website-dev"
+contact_email="alexyfchen@google.com"
+dc_website_domain="alex-datacommons.dev"
+use_resource_suffix=true
+resource_suffix="alex-dev"

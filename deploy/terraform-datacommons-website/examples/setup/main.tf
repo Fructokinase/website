@@ -19,21 +19,14 @@ resource "random_id" "rnd" {
 }
 
 locals {
-  # If the website domain is not provided, then the following default domain is to be created.
-  # <project_id>-datacommons.com
-  # <<<<< BEGIN Important note >>>>>
-  # Because <project_id>-datacommons.com is unlikely to be a common domain name,
-  # we make an assumption that the cost is $12.00 USD per year.
-  # If that is not the case, look up the cost of the domain on domains.google.com,
-  # and use that as an input for the domain_yearly_price variable.
-  #
-  # This is where the default domain is defined. When changing the default domain name,
-  # please also change the value of dc_website_domain in scripts/get-dc.sh.
-  # <<<<< END Important note >>>>>
-  dc_website_domain = coalesce(
-    var.dc_website_domain, format("%s-datacommons.com", var.project_id))
+  # If use_resource_suffix is false, there will be no suffix.
+  # Otherwise:
+  #   If resource_suffix variable is specified, use it.
+  #   Otherwise, use a random value.
+  resource_suffix = var.use_resource_suffix ? format("-%s",
+    var.resource_suffix != "" ? var.resource_suffix : random_id.rnd.hex) : ""
 
-  resource_suffix = var.use_resource_suffix ? format("-%s", random_id.rnd.hex) : ""
+  website_robot_account_id = local.resource_suffix == "" ? var.website_robot_account_id : format("%s%s", var.website_robot_account_id, local.resource_suffix)
 }
 
 module "enabled_google_apis" {
@@ -66,7 +59,7 @@ module "enabled_google_apis" {
 }
 
 resource "google_service_account" "web_robot" {
-  account_id   = var.website_robot_account_id
+  account_id   = local.website_robot_account_id
   display_name = "The account id to the SA that will run custom DC web containers."
   project      = var.project_id
 
@@ -78,6 +71,22 @@ resource "google_compute_global_address" "dc_website_ingress_ip" {
   project      = var.project_id
 
   depends_on   = [module.enabled_google_apis]
+}
+
+locals {
+  # If the website domain is not provided, then the following default domain is to be created.
+  # <project_id>-datacommons.com
+  # <<<<< BEGIN Important note >>>>>
+  # Because <project_id>-datacommons.com is unlikely to be a common domain name,
+  # we make an assumption that the cost is $12.00 USD per year.
+  # If that is not the case, look up the cost of the domain on domains.google.com,
+  # and use that as an input for the domain_yearly_price variable.
+  #
+  # This is where the default domain is defined. When changing the default domain name,
+  # please also change the value of dc_website_domain in scripts/get-dc.sh.
+  # <<<<< END Important note >>>>>
+  dc_website_domain = coalesce(
+    var.dc_website_domain, format("%s-datacommons.com", var.project_id))
 }
 
 resource "google_dns_managed_zone" "datacommons_zone" {

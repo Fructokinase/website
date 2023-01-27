@@ -14,10 +14,14 @@
 
 locals {
     # Example cluster name: datacommons-us-central1
-    cluster_name = format("%s-%s%s",var.cluster_name_prefix,var.region, var.resource_suffix)
+    default_cluster_name = format("%s-%s%s",var.cluster_name_prefix,var.region, var.resource_suffix)
+
+    # This is also the output of this module.
+    cluster_name = var.create_gke_cluster ? local.default_cluster_name : var.existing_gke_cluster_name
 }
 
 resource "null_resource" "gke_cluster" {
+  count            = var.create_gke_cluster ? 1 : 0
   provisioner "local-exec" {
     command = "sh create_cluster.sh"
     working_dir = path.module
@@ -42,10 +46,9 @@ resource "null_resource" "gke_cluster_configuration" {
       CLUSTER_NAME       = local.cluster_name
       REGION             = var.region
       WEB_ROBOT_SA_EMAIL = var.web_robot_sa_email
+      NAMESPACE          = var.k8s_namespace
     }
   }
 
-  depends_on = [
-    null_resource.gke_cluster
-  ]
+  depends_on = [null_resource.gke_cluster]
 }

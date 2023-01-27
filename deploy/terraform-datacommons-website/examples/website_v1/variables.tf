@@ -58,3 +58,21 @@ variable "use_resource_suffix" {
   description = "If true then add a random suffix to the ending of GCP resource names to avoid name collision."
   default     = false
 }
+
+variable "deploy_esp" {
+  type        = bool
+  description = "Set this to false if deploying to a GCP project with Endpoints config already deployed."
+  default     = true
+}
+
+variable "create_gke_cluster" {
+  type        = bool
+  description = "Set this to false if deploying to an existing GKE cluster. Please also set existing_gke_cluster_name."
+  default     = true
+}
+
+variable "existing_gke_cluster_name" {
+  type        = string
+  description = "Name of the existing regional GKE cluster to deploy to. Must be in the region as specified in this file."
+  default     = null
+}

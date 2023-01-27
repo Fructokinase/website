@@ -1,0 +1,7 @@
+project_id="datcom-website-dev"
+dc_website_domain="alex-datacommons.dev"
+use_resource_suffix=true
+resource_suffix="alex-dev"
+create_gke_cluster=false
+existing_gke_cluster_name="datacommons-us-central1"
+web_robot_sa_email="website-robot-alex-dev@datcom-website-dev.iam.gserviceaccount.com"
